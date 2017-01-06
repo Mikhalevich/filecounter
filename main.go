@@ -2,12 +2,23 @@ package main
 
 import (
 	"bufio"
+	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"time"
 )
+
+var (
+	results         = make([]FileInfo, 0)
+	skipDirectories = map[string]bool{"skip_dir": true}
+)
+
+type Params struct {
+	Root string
+}
 
 type FileInfo struct {
 	Path  string
@@ -19,10 +30,16 @@ func (self FileInfo) String() string {
 	return fmt.Sprintf("Path = %s; Size = %d; LineCount = %d", self.Path, self.Size, self.Lines)
 }
 
-var (
-	results         = make([]FileInfo, 0)
-	skipDirectories = map[string]bool{"skip_dir": true}
-)
+func parseArguments() (*Params, error) {
+	root := flag.String("root", "", "root directory to process")
+	flag.Parse()
+
+	if *root == "" {
+		return nil, errors.New("Please specify root directory")
+	}
+
+	return &Params{Root: *root}, nil
+}
 
 func processFile(path string, info os.FileInfo, err error) error {
 	if info.IsDir() {
@@ -59,7 +76,13 @@ func processFile(path string, info os.FileInfo, err error) error {
 func main() {
 	startTime := time.Now()
 
-	filepath.Walk("test", processFile)
+	params, err := parseArguments()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	filepath.Walk(params.Root, processFile)
 
 	totalCount := 0
 	for _, info := range results {
