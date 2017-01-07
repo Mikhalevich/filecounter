@@ -26,6 +26,7 @@ type Params struct {
 	Root            string   `json:"root"`
 	SkipDirectories []string `json:"skip,omitempty"`
 	Extentions      []string `json:"ext,omitempty"`
+	PrintLines      int      `json:"print_lines,omitempty"`
 }
 
 type FileInfo struct {
@@ -117,7 +118,9 @@ func main() {
 
 	totalCount := 0
 	for _, info := range results {
-		fmt.Println(info)
+		if params.PrintLines >= 0 && params.PrintLines < info.Lines {
+			fmt.Println(info)
+		}
 		totalCount += info.Lines
 	}
 	fmt.Printf("Total lines = %d\n", totalCount)
