@@ -2,22 +2,30 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
 )
 
+const (
+	configFile = "config.json"
+)
+
 var (
-	results         = make([]FileInfo, 0)
-	skipDirectories = map[string]bool{"skip_dir": true}
+	results            = []FileInfo{}
+	skipDirectories    = make(map[string]bool)
+	extensionToProcess = make(map[string]bool)
 )
 
 type Params struct {
-	Root string
+	Root            string   `json:"root"`
+	SkipDirectories []string `json:"skip,omitempty"`
+	Extentions      []string `json:"ext,omitempty"`
 }
 
 type FileInfo struct {
@@ -30,22 +38,45 @@ func (self FileInfo) String() string {
 	return fmt.Sprintf("Path = %s; Size = %d; LineCount = %d", self.Path, self.Size, self.Lines)
 }
 
-func parseArguments() (*Params, error) {
-	root := flag.String("root", "", "root directory to process")
-	flag.Parse()
+func parseConfig() (*Params, error) {
+	file, err := os.Open(configFile)
+	if err != nil {
+		return nil, err
+	}
 
-	if *root == "" {
+	bytes, err := ioutil.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
+
+	var params Params
+	json.Unmarshal(bytes, &params)
+
+	if params.Root == "" {
 		return nil, errors.New("Please specify root directory")
 	}
 
-	return &Params{Root: *root}, nil
+	for _, dirName := range params.SkipDirectories {
+		skipDirectories[dirName] = true
+	}
+
+	for _, ext := range params.Extentions {
+		extensionToProcess[ext] = true
+	}
+
+	return &params, nil
 }
 
 func processFile(path string, info os.FileInfo, err error) error {
+	if _, ok := skipDirectories[info.Name()]; ok {
+		return filepath.SkipDir
+	}
+
 	if info.IsDir() {
-		if _, ok := skipDirectories[info.Name()]; ok {
-			return filepath.SkipDir
-		}
+		return nil
+	}
+
+	if _, ok := extensionToProcess[filepath.Ext(path)]; !ok {
 		return nil
 	}
 
@@ -76,7 +107,7 @@ func processFile(path string, info os.FileInfo, err error) error {
 func main() {
 	startTime := time.Now()
 
-	params, err := parseArguments()
+	params, err := parseConfig()
 	if err != nil {
 		fmt.Println(err)
 		return
