@@ -30,9 +30,10 @@ type Params struct {
 }
 
 type FileInfo struct {
-	Path  string
-	Size  int64
-	Lines int
+	Path      string
+	Size      int64
+	Lines     int
+	Extention string
 }
 
 func (self FileInfo) String() string {
@@ -77,7 +78,8 @@ func processFile(path string, info os.FileInfo, err error) error {
 		return nil
 	}
 
-	if _, ok := extensionToProcess[filepath.Ext(path)]; !ok {
+	extention := filepath.Ext(path)
+	if _, ok := extensionToProcess[extention]; !ok {
 		return nil
 	}
 
@@ -100,7 +102,7 @@ func processFile(path string, info os.FileInfo, err error) error {
 		lineCount += 1
 	}
 
-	results = append(results, FileInfo{Path: path, Size: info.Size(), Lines: lineCount})
+	results = append(results, FileInfo{Path: path, Size: info.Size(), Lines: lineCount, Extention: extention})
 
 	return nil
 }
