@@ -118,14 +118,25 @@ func main() {
 
 	filepath.Walk(params.Root, processFile)
 
-	totalCount := 0
+	files := make(map[string]int)
+	totalFiles := 0
+	totalLines := 0
 	for _, info := range results {
 		if params.PrintLines >= 0 && params.PrintLines < info.Lines {
 			fmt.Println(info)
 		}
-		totalCount += info.Lines
+		filecount := files[info.Extention]
+		filecount++
+		files[info.Extention] = filecount
+		totalFiles += 1
+		totalLines += info.Lines
 	}
-	fmt.Printf("Total lines = %d\n", totalCount)
+
+	for ext, count := range files {
+		fmt.Printf("%s files = %d\n", ext, count)
+	}
+	fmt.Printf("Total files = %d\n", totalFiles)
+	fmt.Printf("Total lines = %d\n", totalLines)
 
 	fmt.Printf("Execution time = %v\n", time.Now().Sub(startTime))
 }
