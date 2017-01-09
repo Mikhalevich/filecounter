@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 )
 
@@ -103,44 +104,66 @@ func parseConfig(configFile string) (*Params, error) {
 	return &params, nil
 }
 
-func processFile(path string, info os.FileInfo, err error) error {
-	if _, ok := skipDirectories[info.Name()]; ok {
-		return filepath.SkipDir
-	}
+func walkFiles(params *Params) {
+	var waitGroup sync.WaitGroup
+	fileResult := make(chan FileInfo)
+	resultFinish := make(chan bool)
 
-	if info.IsDir() {
-		return nil
-	}
+	go func() {
+		for info := range fileResult {
+			results = append(results, info)
+		}
 
-	extention := filepath.Ext(path)
-	if len(extensionToProcess) > 0 {
-		if _, ok := extensionToProcess[extention]; !ok {
+		resultFinish <- true
+	}()
+
+	filepath.Walk(params.Root, func(path string, info os.FileInfo, err error) error {
+		if _, ok := skipDirectories[info.Name()]; ok {
+			return filepath.SkipDir
+		}
+
+		if info.IsDir() {
 			return nil
 		}
-	}
 
-	file, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-
-	var lineCount int = 0
-	lineReader := bufio.NewReader(file)
-
-	for {
-		_, err := lineReader.ReadString('\n')
-		if err != nil {
-			if err == io.EOF {
-				break
+		extention := filepath.Ext(path)
+		if len(extensionToProcess) > 0 {
+			if _, ok := extensionToProcess[extention]; !ok {
+				return nil
 			}
-			return err
 		}
-		lineCount += 1
-	}
 
-	results = append(results, FileInfo{Path: path, Size: info.Size(), Lines: lineCount, Extention: extention})
+		waitGroup.Add(1)
+		go func() {
+			defer waitGroup.Done()
+			file, err := os.Open(path)
+			if err != nil {
+				return
+			}
 
-	return nil
+			var lineCount int = 0
+			lineReader := bufio.NewReader(file)
+
+			for {
+				_, err := lineReader.ReadString('\n')
+				if err != nil {
+					if err == io.EOF {
+						break
+					}
+					return
+				}
+				lineCount += 1
+			}
+
+			fileResult <- FileInfo{Path: path, Size: info.Size(), Lines: lineCount, Extention: extention}
+		}()
+
+		return nil
+	})
+
+	waitGroup.Wait()
+	close(fileResult)
+	<-resultFinish
 }
 
 func printResults(params *Params, results []FileInfo) {
@@ -179,7 +202,7 @@ func main() {
 		return
 	}
 
-	filepath.Walk(params.Root, processFile)
+	walkFiles(params)
 
 	printResults(params, results)
 
