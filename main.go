@@ -15,7 +15,6 @@ import (
 )
 
 var (
-	results            = []FileInfo{}
 	skipDirectories    = make(map[string]bool)
 	extensionToProcess = make(map[string]bool)
 )
@@ -104,8 +103,9 @@ func parseConfig(configFile string) (*Params, error) {
 	return &params, nil
 }
 
-func walkFiles(params *Params) {
+func walkFiles(params *Params) *[]FileInfo {
 	var waitGroup sync.WaitGroup
+	results := make([]FileInfo, 0)
 	fileResult := make(chan FileInfo)
 	resultFinish := make(chan bool)
 
@@ -164,14 +164,16 @@ func walkFiles(params *Params) {
 	waitGroup.Wait()
 	close(fileResult)
 	<-resultFinish
+
+	return &results
 }
 
-func printResults(params *Params, results []FileInfo) {
+func printResults(params *Params, results *[]FileInfo) {
 	totalFiles := make(map[string]TotalFileInfo)
 	totalFilesCount := 0
 	totalLinesCount := 0
 
-	for _, info := range results {
+	for _, info := range *results {
 		if params.PrintLines >= 0 && params.PrintLines < info.Lines {
 			fmt.Println(info)
 		}
@@ -202,8 +204,7 @@ func main() {
 		return
 	}
 
-	walkFiles(params)
-
+	results := walkFiles(params)
 	printResults(params, results)
 
 	fmt.Printf("Execution time = %v\n", time.Now().Sub(startTime))
