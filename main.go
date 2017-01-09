@@ -4,16 +4,13 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
-)
-
-const (
-	configFile = "config.json"
 )
 
 var (
@@ -29,6 +26,15 @@ type Params struct {
 	PrintLines      int      `json:"print_lines,omitempty"`
 }
 
+func NewParams() *Params {
+	return &Params{
+		Root:            "",
+		SkipDirectories: make([]string, 0),
+		Extentions:      make([]string, 0),
+		PrintLines:      -1,
+	}
+}
+
 type FileInfo struct {
 	Path      string
 	Size      int64
@@ -40,7 +46,33 @@ func (self FileInfo) String() string {
 	return fmt.Sprintf("Path = %s; Size = %d; LineCount = %d", self.Path, self.Size, self.Lines)
 }
 
-func parseConfig() (*Params, error) {
+func parseArguments() (*Params, error) {
+	rootDir := flag.String("root", "", "root directory to scan")
+	configFile := flag.String("config", "", "json configuration file")
+
+	flag.Parse()
+
+	params := NewParams()
+	var err error
+	if *configFile != "" {
+		params, err = parseConfig(*configFile)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if *rootDir != "" {
+		params.Root = *rootDir
+	}
+
+	if params.Root == "" {
+		return nil, errors.New("Please specify root directory")
+	}
+
+	return params, nil
+}
+
+func parseConfig(configFile string) (*Params, error) {
 	file, err := os.Open(configFile)
 	if err != nil {
 		return nil, err
@@ -53,10 +85,6 @@ func parseConfig() (*Params, error) {
 
 	var params Params
 	json.Unmarshal(bytes, &params)
-
-	if params.Root == "" {
-		return nil, errors.New("Please specify root directory")
-	}
 
 	for _, dirName := range params.SkipDirectories {
 		skipDirectories[dirName] = true
@@ -110,7 +138,7 @@ func processFile(path string, info os.FileInfo, err error) error {
 func main() {
 	startTime := time.Now()
 
-	params, err := parseConfig()
+	params, err := parseArguments()
 	if err != nil {
 		fmt.Println(err)
 		return
