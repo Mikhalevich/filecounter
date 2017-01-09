@@ -107,8 +107,10 @@ func processFile(path string, info os.FileInfo, err error) error {
 	}
 
 	extention := filepath.Ext(path)
-	if _, ok := extensionToProcess[extention]; !ok {
-		return nil
+	if len(extensionToProcess) > 0 {
+		if _, ok := extensionToProcess[extention]; !ok {
+			return nil
+		}
 	}
 
 	file, err := os.Open(path)
