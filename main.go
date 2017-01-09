@@ -46,6 +46,12 @@ func (self FileInfo) String() string {
 	return fmt.Sprintf("Path = %s; Size = %d; LineCount = %d", self.Path, self.Size, self.Lines)
 }
 
+type TotalFileInfo struct {
+	Count int
+	Size  int64
+	Lines int
+}
+
 func parseArguments() (*Params, error) {
 	rootDir := flag.String("root", "", "root directory to scan")
 	configFile := flag.String("config", "", "json configuration file")
@@ -137,6 +143,33 @@ func processFile(path string, info os.FileInfo, err error) error {
 	return nil
 }
 
+func printResults(params *Params, results []FileInfo) {
+	totalFiles := make(map[string]TotalFileInfo)
+	totalFilesCount := 0
+	totalLinesCount := 0
+
+	for _, info := range results {
+		if params.PrintLines >= 0 && params.PrintLines < info.Lines {
+			fmt.Println(info)
+		}
+		totalInfo := totalFiles[info.Extention]
+		totalInfo.Count++
+		totalInfo.Size += info.Size
+		totalInfo.Lines += info.Lines
+		totalFiles[info.Extention] = totalInfo
+
+		totalFilesCount += 1
+		totalLinesCount += info.Lines
+	}
+
+	fmt.Println("File count by suffix:")
+	for ext, info := range totalFiles {
+		fmt.Printf("%s => count = %d; size = %d; lines = %d\n", ext, info.Count, info.Size, info.Lines)
+	}
+	fmt.Printf("Total files = %d\n", totalFilesCount)
+	fmt.Printf("Total lines = %d\n", totalLinesCount)
+}
+
 func main() {
 	startTime := time.Now()
 
@@ -148,25 +181,7 @@ func main() {
 
 	filepath.Walk(params.Root, processFile)
 
-	files := make(map[string]int)
-	totalFiles := 0
-	totalLines := 0
-	for _, info := range results {
-		if params.PrintLines >= 0 && params.PrintLines < info.Lines {
-			fmt.Println(info)
-		}
-		filecount := files[info.Extention]
-		filecount++
-		files[info.Extention] = filecount
-		totalFiles += 1
-		totalLines += info.Lines
-	}
-
-	for ext, count := range files {
-		fmt.Printf("%s files = %d\n", ext, count)
-	}
-	fmt.Printf("Total files = %d\n", totalFiles)
-	fmt.Printf("Total lines = %d\n", totalLines)
+	printResults(params, results)
 
 	fmt.Printf("Execution time = %v\n", time.Now().Sub(startTime))
 }
