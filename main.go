@@ -83,6 +83,7 @@ func parseConfig(configFile string) (*Params, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
 
 	bytes, err := ioutil.ReadAll(file)
 	if err != nil {
@@ -140,6 +141,7 @@ func walkFiles(params *Params) *[]FileInfo {
 			if err != nil {
 				return
 			}
+			defer file.Close()
 
 			var lineCount int = 0
 			lineReader := bufio.NewReader(file)
