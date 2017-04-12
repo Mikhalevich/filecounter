@@ -14,6 +14,10 @@ import (
 	"time"
 )
 
+const (
+	cConfigFile = "config.json"
+)
+
 var (
 	skipDirectories    = make(map[string]bool)
 	extensionToProcess = make(map[string]bool)
@@ -54,7 +58,7 @@ type TotalFileInfo struct {
 
 func parseArguments() (*Params, error) {
 	rootDir := flag.String("root", "", "root directory to scan")
-	configFile := flag.String("config", "", "json configuration file")
+	configFile := flag.String("config", cConfigFile, "json configuration file")
 
 	flag.Parse()
 
