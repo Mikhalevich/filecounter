@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
 	"time"
 )
@@ -178,6 +179,8 @@ func printResults(params *Params, results *[]FileInfo) {
 	totalFiles := make(map[string]TotalFileInfo)
 	totalFilesCount := 0
 	totalLinesCount := 0
+
+	sort.Slice(*results, func(i, j int) bool { return (*results)[i].Lines < (*results)[j].Lines })
 
 	for _, info := range *results {
 		if params.PrintLines >= 0 && params.PrintLines < info.Lines {
