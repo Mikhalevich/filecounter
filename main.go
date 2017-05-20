@@ -11,8 +11,9 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"sync"
 	"time"
+
+	"github.com/Mikhalevich/gojob"
 )
 
 const (
@@ -110,18 +111,7 @@ func parseConfig(configFile string) (*Params, error) {
 }
 
 func walkFiles(params *Params) *[]FileInfo {
-	var waitGroup sync.WaitGroup
-	results := make([]FileInfo, 0)
-	fileResult := make(chan FileInfo)
-	resultFinish := make(chan bool)
-
-	go func() {
-		for info := range fileResult {
-			results = append(results, info)
-		}
-
-		resultFinish <- true
-	}()
+	fileJob := gojob.NewJob()
 
 	filepath.Walk(params.Root, func(path string, info os.FileInfo, err error) error {
 		if _, ok := skipDirectories[info.Name()]; ok {
@@ -139,12 +129,10 @@ func walkFiles(params *Params) *[]FileInfo {
 			}
 		}
 
-		waitGroup.Add(1)
-		go func() {
-			defer waitGroup.Done()
+		workerFunc := func() (interface{}, error) {
 			file, err := os.Open(path)
 			if err != nil {
-				return
+				return nil, err
 			}
 			defer file.Close()
 
@@ -157,20 +145,24 @@ func walkFiles(params *Params) *[]FileInfo {
 					if err == io.EOF {
 						break
 					}
-					return
+					return nil, err
 				}
 				lineCount += 1
 			}
 
-			fileResult <- FileInfo{Path: path, Size: info.Size(), Lines: lineCount, Extention: extention}
-		}()
+			return FileInfo{Path: path, Size: info.Size(), Lines: lineCount, Extention: extention}, nil
+		}
+
+		fileJob.Add(workerFunc)
 
 		return nil
 	})
 
-	waitGroup.Wait()
-	close(fileResult)
-	<-resultFinish
+	fileJob.Wait()
+	results := make([]FileInfo, len(fileJob.Results))
+	for index, value := range fileJob.Results {
+		results[index] = value.(FileInfo)
+	}
 
 	return &results
 }
