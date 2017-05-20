@@ -64,13 +64,16 @@ func parseArguments() (*Params, error) {
 
 	flag.Parse()
 
-	params := NewParams()
+	var params *Params
 	var err error
 	if *configFile != "" {
 		params, err = parseConfig(*configFile)
 		if err != nil {
 			return nil, err
 		}
+	}
+	if params == nil {
+		params = NewParams()
 	}
 
 	if *rootDir != "" {
@@ -87,6 +90,9 @@ func parseArguments() (*Params, error) {
 func parseConfig(configFile string) (*Params, error) {
 	file, err := os.Open(configFile)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	defer file.Close()
@@ -96,8 +102,11 @@ func parseConfig(configFile string) (*Params, error) {
 		return nil, err
 	}
 
-	var params Params
-	json.Unmarshal(bytes, &params)
+	params := NewParams()
+	err = json.Unmarshal(bytes, params)
+	if err != nil {
+		return nil, err
+	}
 
 	for _, dirName := range params.SkipDirectories {
 		skipDirectories[dirName] = true
@@ -107,7 +116,7 @@ func parseConfig(configFile string) (*Params, error) {
 		extensionToProcess[ext] = true
 	}
 
-	return &params, nil
+	return params, nil
 }
 
 func walkFiles(params *Params) ([]FileInfo, []error) {
