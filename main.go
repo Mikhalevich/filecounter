@@ -110,7 +110,7 @@ func parseConfig(configFile string) (*Params, error) {
 	return &params, nil
 }
 
-func walkFiles(params *Params) *[]FileInfo {
+func walkFiles(params *Params) ([]FileInfo, []error) {
 	fileJob := gojob.NewJob()
 
 	filepath.Walk(params.Root, func(path string, info os.FileInfo, err error) error {
@@ -159,22 +159,23 @@ func walkFiles(params *Params) *[]FileInfo {
 	})
 
 	fileJob.Wait()
+
 	results := make([]FileInfo, len(fileJob.Results))
 	for index, value := range fileJob.Results {
 		results[index] = value.(FileInfo)
 	}
 
-	return &results
+	return results, fileJob.Errors
 }
 
-func printResults(params *Params, results *[]FileInfo) {
+func printResults(params *Params, results []FileInfo, errors []error) {
 	totalFiles := make(map[string]TotalFileInfo)
 	totalFilesCount := 0
 	totalLinesCount := 0
 
-	sort.Slice(*results, func(i, j int) bool { return (*results)[i].Lines < (*results)[j].Lines })
+	sort.Slice(results, func(i, j int) bool { return results[i].Lines < results[j].Lines })
 
-	for _, info := range *results {
+	for _, info := range results {
 		if params.PrintLines >= 0 && params.PrintLines < info.Lines {
 			fmt.Println(info)
 		}
@@ -194,6 +195,10 @@ func printResults(params *Params, results *[]FileInfo) {
 	}
 	fmt.Printf("Total files = %d\n", totalFilesCount)
 	fmt.Printf("Total lines = %d\n", totalLinesCount)
+
+	for _, err := range errors {
+		fmt.Printf("Error: %v\n", err)
+	}
 }
 
 func main() {
@@ -205,8 +210,8 @@ func main() {
 		return
 	}
 
-	results := walkFiles(params)
-	printResults(params, results)
+	results, errors := walkFiles(params)
+	printResults(params, results, errors)
 
 	fmt.Printf("Execution time = %v\n", time.Now().Sub(startTime))
 }
