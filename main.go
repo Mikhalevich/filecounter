@@ -20,6 +20,42 @@ const (
 	cConfigFile = "config.json"
 )
 
+type ByteSize float64
+
+const (
+	_           = iota // ignore first value by assigning to blank identifier
+	KB ByteSize = 1 << (10 * iota)
+	MB
+	GB
+	TB
+	PB
+	EB
+	ZB
+	YB
+)
+
+func (b ByteSize) String() string {
+	switch {
+	case b >= YB:
+		return fmt.Sprintf("%.2fYB", b/YB)
+	case b >= ZB:
+		return fmt.Sprintf("%.2fZB", b/ZB)
+	case b >= EB:
+		return fmt.Sprintf("%.2fEB", b/EB)
+	case b >= PB:
+		return fmt.Sprintf("%.2fPB", b/PB)
+	case b >= TB:
+		return fmt.Sprintf("%.2fTB", b/TB)
+	case b >= GB:
+		return fmt.Sprintf("%.2fGB", b/GB)
+	case b >= MB:
+		return fmt.Sprintf("%.2fMB", b/MB)
+	case b >= KB:
+		return fmt.Sprintf("%.2fKB", b/KB)
+	}
+	return fmt.Sprintf("%.2fB", b)
+}
+
 var (
 	skipDirectories    = make(map[string]bool)
 	extensionToProcess = make(map[string]bool)
@@ -43,18 +79,18 @@ func NewParams() *Params {
 
 type FileInfo struct {
 	Path      string
-	Size      int64
+	Size      ByteSize
 	Lines     int
 	Extention string
 }
 
 func (self FileInfo) String() string {
-	return fmt.Sprintf("Path = %s; Size = %d; LineCount = %d", self.Path, self.Size, self.Lines)
+	return fmt.Sprintf("Path = %s; Size = %s; LineCount = %d", self.Path, self.Size, self.Lines)
 }
 
 type TotalFileInfo struct {
 	Count int
-	Size  int64
+	Size  ByteSize
 	Lines int
 }
 
@@ -159,7 +195,8 @@ func walkFiles(params *Params) ([]FileInfo, []error) {
 				lineCount += 1
 			}
 
-			return FileInfo{Path: path, Size: info.Size(), Lines: lineCount, Extention: extention}, nil
+			var bs ByteSize = ByteSize(info.Size())
+			return FileInfo{Path: path, Size: bs, Lines: lineCount, Extention: extention}, nil
 		}
 
 		fileJob.Add(workerFunc)
@@ -201,7 +238,7 @@ func printResults(params *Params, results []FileInfo, errors []error) {
 
 	fmt.Println("File count by suffix:")
 	for ext, info := range totalFiles {
-		fmt.Printf("%s => count = %d; size = %d; lines = %d\n", ext, info.Count, info.Size, info.Lines)
+		fmt.Printf("%s => count = %d; size = %s; lines = %d\n", ext, info.Count, info.Size, info.Lines)
 	}
 	fmt.Printf("Total files = %d\n", totalFilesCount)
 	fmt.Printf("Total lines = %d\n", totalLinesCount)
