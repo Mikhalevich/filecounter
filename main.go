@@ -13,7 +13,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/Mikhalevich/gojob"
+	"github.com/Mikhalevich/jober"
 )
 
 const (
@@ -120,7 +120,7 @@ func parseConfig(configFile string) (*Params, error) {
 }
 
 func walkFiles(params *Params) ([]FileInfo, []error) {
-	fileJob := gojob.NewJob()
+	fileJob := jober.NewAll()
 
 	filepath.Walk(params.Root, func(path string, info os.FileInfo, err error) error {
 		if _, ok := skipDirectories[info.Name()]; ok {
@@ -169,12 +169,13 @@ func walkFiles(params *Params) ([]FileInfo, []error) {
 
 	fileJob.Wait()
 
-	results := make([]FileInfo, len(fileJob.Results))
-	for index, value := range fileJob.Results {
+	res, errs := fileJob.Get()
+	results := make([]FileInfo, len(res))
+	for index, value := range res {
 		results[index] = value.(FileInfo)
 	}
 
-	return results, fileJob.Errors
+	return results, errs
 }
 
 func printResults(params *Params, results []FileInfo, errors []error) {
