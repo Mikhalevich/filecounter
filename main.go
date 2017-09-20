@@ -156,7 +156,7 @@ func parseConfig(configFile string) (*Params, error) {
 }
 
 func walkFiles(params *Params) ([]FileInfo, []error) {
-	fileJob := jober.NewAll()
+	fileJob := jober.NewWorkerPool(jober.NewAll(), 1000)
 
 	filepath.Walk(params.Root, func(path string, info os.FileInfo, err error) error {
 		if _, ok := skipDirectories[info.Name()]; ok {
