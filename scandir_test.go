@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"path/filepath"
 	"testing"
 )
 
@@ -15,15 +15,31 @@ func TestScan(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, v := range res {
-		fmt.Println(v)
+	files := map[string]FileInfo{
+		"cppFile.cpp":   FileInfo{Lines: 3, Size: 6},
+		"javaFile.java": FileInfo{Lines: 5, Size: 10},
+		"goFile.go":     FileInfo{Lines: 7, Size: 14},
+		"jsFile.js":     FileInfo{Lines: 9, Size: 18},
 	}
 
-	if len(res) != 2 {
+	if len(res) != len(files) {
 		t.Fatal("res count is not valid")
 	}
 
-	if res[0].Lines+res[1].Lines != (3 + 5) {
-		t.Fatal("Invalid file size")
+	for _, r := range res {
+		fileName := filepath.Base(r.Path)
+		sv, ok := files[fileName]
+
+		if !ok {
+			t.Fatalf("%s no such stored filename\n", fileName)
+		}
+
+		if sv.Lines != r.Lines {
+			t.Fatalf("%s lines not mutch\n", fileName)
+		}
+
+		if sv.Size != r.Size {
+			t.Fatalf("%s size not mutch\n", fileName)
+		}
 	}
 }
