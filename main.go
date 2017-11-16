@@ -65,7 +65,8 @@ type Params struct {
 	Root            string   `json:"root"`
 	SkipDirectories []string `json:"skip,omitempty"`
 	Extentions      []string `json:"ext,omitempty"`
-	PrintLines      int      `json:"print_lines,omitempty"`
+	PrintBySize     bool     `json:"print_by_size,omitempty"`
+	PrintValue      int      `json:"print_value,omitempty"`
 }
 
 func NewParams() *Params {
@@ -73,7 +74,8 @@ func NewParams() *Params {
 		Root:            "",
 		SkipDirectories: make([]string, 0),
 		Extentions:      make([]string, 0),
-		PrintLines:      -1,
+		PrintBySize:     false,
+		PrintValue:      -1,
 	}
 }
 
@@ -96,19 +98,6 @@ type GroupFileInfo struct {
 
 func (self GroupFileInfo) String() string {
 	return fmt.Sprintf("Count = %d; Sizse %s; LineCount = %d", self.Count, self.Size, self.Lines)
-}
-
-type PrintFileInfo struct {
-	Extentions map[string]GroupFileInfo
-	Total      GroupFileInfo
-	Print      []FileInfo
-}
-
-func NewPrintFileInfo() *PrintFileInfo {
-	return &PrintFileInfo{
-		Extentions: make(map[string]GroupFileInfo),
-		Print:      make([]FileInfo, 0),
-	}
 }
 
 func parseArguments() (*Params, error) {
@@ -232,13 +221,13 @@ func walkFiles(params *Params) ([]FileInfo, []error) {
 	return results, errs
 }
 
-func computeResults(params *Params, results []FileInfo) *PrintFileInfo {
+func computeResults(pc PrintChecker, results []FileInfo) *PrintFileInfo {
 	pfi := NewPrintFileInfo()
 
 	sort.Slice(results, func(i, j int) bool { return results[i].Lines < results[j].Lines })
 
 	for _, info := range results {
-		if params.PrintLines >= 0 && params.PrintLines < info.Lines {
+		if pc.Match(info) {
 			pfi.Print = append(pfi.Print, info)
 		}
 		extInfo := pfi.Extentions[info.Extention]
@@ -255,26 +244,6 @@ func computeResults(params *Params, results []FileInfo) *PrintFileInfo {
 	return pfi
 }
 
-func printResults(pfi *PrintFileInfo, errors []error) {
-	fmt.Println("Files:")
-	for _, info := range pfi.Print {
-		fmt.Println(info)
-	}
-
-	fmt.Println("Errors:")
-	for _, err := range errors {
-		fmt.Printf("Error: %v\n", err)
-	}
-
-	fmt.Println("File count by suffix:")
-	for ext, info := range pfi.Extentions {
-		fmt.Printf("%s => count = %d; size = %s; lines = %d\n", ext, info.Count, info.Size, info.Lines)
-	}
-
-	fmt.Println("Total file info:")
-	fmt.Println(pfi.Total)
-}
-
 func main() {
 	startTime := time.Now()
 
@@ -285,7 +254,7 @@ func main() {
 	}
 
 	results, errors := walkFiles(params)
-	cfr := computeResults(params, results)
+	cfr := computeResults(checker(params), results)
 	printResults(cfr, errors)
 
 	fmt.Printf("Execution time = %v\n", time.Now().Sub(startTime))

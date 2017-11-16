@@ -46,7 +46,7 @@ func TestScan(t *testing.T) {
 		}
 	}
 
-	pfi := computeResults(params, res)
+	pfi := computeResults(checker(params), res)
 	if len(pfi.Extentions) != 4 {
 		t.Fatal("Invalid compute extention count")
 	}
