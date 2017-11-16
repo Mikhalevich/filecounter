@@ -97,7 +97,7 @@ type GroupFileInfo struct {
 }
 
 func (self GroupFileInfo) String() string {
-	return fmt.Sprintf("Count = %d; Sizse %s; LineCount = %d", self.Count, self.Size, self.Lines)
+	return fmt.Sprintf("Count = %d; Size %s; LineCount = %d", self.Count, self.Size, self.Lines)
 }
 
 func parseArguments() (*Params, error) {
