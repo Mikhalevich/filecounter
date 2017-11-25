@@ -2,17 +2,15 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
 	"time"
 
+	"github.com/Mikhalevich/argparser"
 	"github.com/Mikhalevich/jober"
 )
 
@@ -101,21 +99,22 @@ func (self GroupFileInfo) String() string {
 }
 
 func parseArguments() (*Params, error) {
-	rootDir := flag.String("root", "", "root directory to scan")
-	configFile := flag.String("config", cConfigFile, "json configuration file")
+	rootDir := argparser.String("root", "", "root directory to scan")
 
-	flag.Parse()
+	params := NewParams()
+	p, err, _ := argparser.Parse(params)
 
-	var params *Params
-	var err error
-	if *configFile != "" {
-		params, err = parseConfig(*configFile)
-		if err != nil {
-			return nil, err
-		}
+	if err != nil {
+		return nil, err
 	}
-	if params == nil {
-		params = NewParams()
+	params = p.(*Params)
+
+	for _, dirName := range params.SkipDirectories {
+		skipDirectories[dirName] = true
+	}
+
+	for _, ext := range params.Extentions {
+		extensionToProcess[ext] = true
 	}
 
 	if *rootDir != "" {
@@ -124,38 +123,6 @@ func parseArguments() (*Params, error) {
 
 	if params.Root == "" {
 		return nil, errors.New("Please specify root directory")
-	}
-
-	return params, nil
-}
-
-func parseConfig(configFile string) (*Params, error) {
-	file, err := os.Open(configFile)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	defer file.Close()
-
-	bytes, err := ioutil.ReadAll(file)
-	if err != nil {
-		return nil, err
-	}
-
-	params := NewParams()
-	err = json.Unmarshal(bytes, params)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, dirName := range params.SkipDirectories {
-		skipDirectories[dirName] = true
-	}
-
-	for _, ext := range params.Extentions {
-		extensionToProcess[ext] = true
 	}
 
 	return params, nil
