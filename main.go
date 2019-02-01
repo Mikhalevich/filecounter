@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -99,10 +98,11 @@ func (self GroupFileInfo) String() string {
 }
 
 func parseArguments() (*Params, error) {
-	rootDir := argparser.String("root", "", "root directory to scan")
+	parser := argparser.NewParser()
+	rootDir := parser.String("root", "", "root directory to scan")
 
 	params := NewParams()
-	p, err, _ := argparser.Parse(params)
+	p, err, _ := parser.Parse(params)
 
 	if err != nil {
 		return nil, err
@@ -155,17 +155,13 @@ func walkFiles(params *Params) ([]FileInfo, []error) {
 			defer file.Close()
 
 			var lineCount int = 0
-			lineReader := bufio.NewReader(file)
+			lineScanner := bufio.NewScanner(file)
 
-			for {
-				_, err := lineReader.ReadString('\n')
-				if err != nil {
-					if err == io.EOF {
-						break
-					}
-					return nil, err
-				}
-				lineCount += 1
+			for lineScanner.Scan() {
+				lineCount++
+			}
+			if err := lineScanner.Err(); err != nil {
+				return nil, err
 			}
 
 			var bs ByteSize = ByteSize(info.Size())
