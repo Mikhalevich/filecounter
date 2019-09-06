@@ -1,0 +1,4 @@
+github.com/Mikhalevich/argparser v0.0.0-20190906102120-0fc64fc3e1a2 h1:1eadvuqqUu8KnbyVZXGZHiRL4O596sWSsVRE3IMkomM=
+github.com/Mikhalevich/argparser v0.0.0-20190906102120-0fc64fc3e1a2/go.mod h1:IJtu+uzLoNwPLGEHYTibKyo9ZxmjjkAKmuk4BAvLKEs=
+github.com/Mikhalevich/jober v1.0.0 h1:aKgbZuueQB017hOpmZXQbc/1VIE3r5QJoXwGeiSTz/M=
+github.com/Mikhalevich/jober v1.0.0/go.mod h1:TCAWcY/mWeRlIaJv/M+00Cek3yH+1bFnJzPhVA/OTpU=
